@@ -1,6 +1,7 @@
 # Copyright (c) 2024-2026 Ziqi Fan
 # SPDX-License-Identifier: Apache-2.0
 
+from isaaclab.sensors.ray_caster import patterns
 from isaaclab.utils import configclass
 
 from robot_lab.tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg
@@ -32,14 +33,18 @@ class UnitreeB2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.scene.robot = UNITREE_B2_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/" + self.base_link_name
         self.scene.height_scanner_base.prim_path = "{ENV_REGEX_NS}/Robot/" + self.base_link_name
+        self.scene.height_scanner.pattern_cfg = patterns.GridPatternCfg(resolution=0.1, size=[2.0, 1.2])
+
+        # Make the pyramid stair treads a bit narrower for this B2 run.
+        if self.scene.terrain.terrain_generator is not None:
+            self.scene.terrain.terrain_generator.sub_terrains["pyramid_stairs"].step_width = 0.24
+            self.scene.terrain.terrain_generator.sub_terrains["pyramid_stairs_inv"].step_width = 0.24
 
         # ------------------------------Observations------------------------------
         self.observations.policy.base_lin_vel.scale = 2.0
         self.observations.policy.base_ang_vel.scale = 0.25
         self.observations.policy.joint_pos.scale = 1.0
         self.observations.policy.joint_vel.scale = 0.05
-        self.observations.policy.base_lin_vel = None
-        self.observations.policy.height_scan = None
         self.observations.policy.joint_pos.params["asset_cfg"].joint_names = self.joint_names
         self.observations.policy.joint_vel.params["asset_cfg"].joint_names = self.joint_names
 
