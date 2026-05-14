@@ -205,6 +205,25 @@ python scripts/reinforcement_learning/rsl_rl/train.py --task=<TASK_NAME> --headl
 python scripts/reinforcement_learning/rsl_rl/play.py --task=<TASK_NAME>
 ```
 
+Unitree B2 with actor height scan:
+
+```bash
+# Train
+python scripts/reinforcement_learning/rsl_rl/train.py \
+  --task=RobotLab-Isaac-Velocity-Rough-Unitree-B2-v0 \
+  --headless \
+  --num_envs 2048 \
+  --device cuda:0 \
+  --run_name actor_heightscan_b2_stairw24cm
+```
+
+This configuration restores IsaacLab-style actor observations for B2 rough locomotion:
+
+- `policy.base_lin_vel` is enabled
+- `policy.height_scan` is enabled
+- `height_scanner` uses a `2.0 x 1.2 m` grid at `0.1 m` resolution
+- `pyramid_stairs` and `pyramid_stairs_inv` use `step_width = 0.24`
+
 CusRL (**Experimental**):
 
 ```bash
@@ -401,6 +420,12 @@ To view tensorboard, run:
 
 ```bash
 tensorboard --logdir=logs
+```
+
+For the B2 actor height-scan training above, you can also point TensorBoard directly to the rough B2 logs:
+
+```bash
+tensorboard --logdir=logs/rsl_rl/unitree_b2_rough --port 6006 --bind_all
 ```
 
 ## Code formatting
