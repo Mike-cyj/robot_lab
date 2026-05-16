@@ -121,3 +121,56 @@ def terrain_levels_vel(
 
     terrain.update_env_origins(env_ids, move_up, move_down)
     return torch.mean(terrain.terrain_levels.float())
+
+
+def terrain_levels_stairs(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int],
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    move_up_forward_fraction: float = 0.32,
+    move_up_vertical_gain: float = 0.55,
+    move_down_fraction: float = 0.20,
+    vertical_drop_threshold: float = 0.05,
+    command_threshold: float = 0.15,
+) -> torch.Tensor:
+    """Stair-focused terrain curriculum.
+
+    Compared to the default distance-based curriculum, this version promotes
+    environments that make clear forward progress while also gaining height.
+    This better matches stair-climbing skill than raw planar displacement.
+    """
+    asset = env.scene[asset_cfg.name]
+    terrain = env.scene.terrain
+    command = env.command_manager.get_command("base_velocity")
+
+    if len(env_ids) == 0:
+        return torch.mean(terrain.terrain_levels.float())
+
+    root_pos = asset.data.root_pos_w[env_ids]
+    env_origins = env.scene.env_origins[env_ids]
+    command_xy = command[env_ids, :2]
+
+    delta = root_pos[:, :3] - env_origins[:, :3]
+    planar_distance = torch.norm(delta[:, :2], dim=1)
+    commanded_speed = torch.norm(command_xy, dim=1)
+    terrain_length = float(terrain.cfg.terrain_generator.size[0])
+
+    forward_progress = delta[:, 0]
+    vertical_gain = delta[:, 2].clamp(min=0.0)
+
+    commanded_distance = commanded_speed * env.max_episode_length_s
+    active_command = commanded_speed > command_threshold
+
+    move_up = (
+        (forward_progress > terrain_length * move_up_forward_fraction)
+        | (forward_progress + vertical_gain / move_up_vertical_gain > terrain_length * move_up_forward_fraction)
+    ) & active_command
+
+    move_down = (
+        (planar_distance < commanded_distance * move_down_fraction)
+        | (delta[:, 2] < -vertical_drop_threshold)
+    ) & active_command
+    move_down *= ~move_up
+
+    terrain.update_env_origins(env_ids, move_up, move_down)
+    return torch.mean(terrain.terrain_levels.float())

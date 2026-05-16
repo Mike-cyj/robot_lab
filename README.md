@@ -72,7 +72,51 @@ The table below lists all available environments:
   python -m pip install -e source/robot_lab
   ```
 
-- Verify that the extension is correctly installed by running the following command to print all the available environments in the extension:
+- If you are working from an Isaac Lab checkout and prefer using its wrapper, the equivalent install command is:
+
+  ```bash
+  /path/to/IsaacLab/isaaclab.sh -p -m pip install -e /absolute/path/to/robot_lab/source/robot_lab
+  ```
+
+- After `git pull` on another server, re-run the editable install command above so the latest local code is what Python imports.
+
+### Register And Verify On A New Server
+
+- `robot_lab` environments are registered when Python imports `robot_lab` or `robot_lab.tasks`.
+
+- Verify that Python is loading this repository instead of an older copy:
+
+  ```bash
+  python - <<'PY'
+  import robot_lab
+  print(robot_lab.__file__)
+  PY
+  ```
+
+  Expected result: the printed path should point to your current checkout, e.g. `/absolute/path/to/robot_lab/source/robot_lab/robot_lab/__init__.py`.
+
+- Verify that the task is registered into Gym:
+
+  ```bash
+  python - <<'PY'
+  import gymnasium as gym
+  import robot_lab.tasks  # registers all RobotLab environments
+
+  env_id = "RobotLab-Isaac-Velocity-Rough-Unitree-B2-v0"
+  print("registered:", env_id in gym.registry)
+  print("cfg:", gym.spec(env_id).kwargs["env_cfg_entry_point"])
+  PY
+  ```
+
+  Expected result: `registered: True`, and the config entry point should point into `robot_lab.tasks...`.
+
+- Verify that the extension is correctly installed by printing the registered RobotLab environments:
+
+  ```bash
+  python scripts/tools/list_envs.py --keyword Unitree-B2
+  ```
+
+- If you want to check a full RobotLab listing instead of only B2:
 
   ```bash
   python scripts/tools/list_envs.py
@@ -94,8 +138,9 @@ The table below lists all available environments:
 ### 已做调整
 - 将 `track_lin_vel_xy_exp` 奖励权重调为 `12.0`
 - 将 `track_ang_vel_z_exp` 奖励权重调为 `6.0`
-- 调整课程条件：`move_up_fraction=0.4`，`move_down_fraction=0.25`
-- 初始 yaw 范围改为 `±0.7` 弧度，横向速度限幅改为 `±0.2`
+- 将默认位移课程替换为更适合楼梯的课程升级条件：结合前向推进和竖直增益判断升级
+- B2 楼梯配置调整为：`step_width=0.24`，`step_height_range=0.08-0.28`，楼梯地形总占比 `44%`
+- 初始 yaw 范围放宽为 `±0.7` 弧度；横向速度命令恢复默认 `±1.0`，并通过线速度课程从 `35%` 范围逐步放开
 
 ### 建议的下一步
 - 优先修复 IsaacLab/IsaacSim 环境，使 `python scripts/reinforcement_learning/rsl_rl/train.py` 能正常运行

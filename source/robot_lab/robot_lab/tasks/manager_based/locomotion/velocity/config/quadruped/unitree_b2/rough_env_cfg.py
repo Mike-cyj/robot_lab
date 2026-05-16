@@ -4,6 +4,7 @@
 from isaaclab.sensors.ray_caster import patterns
 from isaaclab.utils import configclass
 
+import robot_lab.tasks.manager_based.locomotion.velocity.mdp as mdp
 from robot_lab.tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg
 
 ##
@@ -37,8 +38,16 @@ class UnitreeB2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
 
         # Make the pyramid stair treads a bit narrower for this B2 run.
         if self.scene.terrain.terrain_generator is not None:
-            self.scene.terrain.terrain_generator.sub_terrains["pyramid_stairs"].step_width = 0.24
-            self.scene.terrain.terrain_generator.sub_terrains["pyramid_stairs_inv"].step_width = 0.24
+            terrain_generator = self.scene.terrain.terrain_generator
+            terrain_generator.size = (4.0, 4.0)
+            terrain_generator.num_rows = 12
+            terrain_generator.num_cols = 24
+            terrain_generator.sub_terrains["pyramid_stairs"].proportion = 0.34
+            terrain_generator.sub_terrains["pyramid_stairs_inv"].proportion = 0.10
+            terrain_generator.sub_terrains["pyramid_stairs"].step_width = 0.24
+            terrain_generator.sub_terrains["pyramid_stairs_inv"].step_width = 0.24
+            terrain_generator.sub_terrains["pyramid_stairs"].step_height_range = (0.08, 0.28)
+            terrain_generator.sub_terrains["pyramid_stairs_inv"].step_height_range = (0.08, 0.28)
 
         # ------------------------------Observations------------------------------
         self.observations.policy.base_lin_vel.scale = 2.0
@@ -62,7 +71,7 @@ class UnitreeB2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
                 "z": (0.0, 0.2),
                 "roll": (-3.14, 3.14),
                 "pitch": (-3.14, 3.14),
-                "yaw": (-0.35, 0.35),  # 初始朝向楼梯 ±20°
+                "yaw": (-0.7, 0.7),  # 初始朝向楼梯约 ±40°
             },
             "velocity_range": {
                 "x": (-0.5, 0.5),
@@ -157,16 +166,18 @@ class UnitreeB2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.terminations.illegal_contact = None
 
         # ------------------------------Curriculums------------------------------
-        # self.curriculum.command_levels_lin_vel.params["range_multiplier"] = (0.2, 1.0)
-        # self.curriculum.command_levels_ang_vel.params["range_multiplier"] = (0.2, 1.0)
-        self.curriculum.command_levels_lin_vel = None
+        self.curriculum.terrain_levels.func = mdp.terrain_levels_stairs
+        self.curriculum.terrain_levels.params = {
+            "move_up_forward_fraction": 0.30,
+            "move_up_vertical_gain": 0.45,
+            "move_down_fraction": 0.18,
+            "vertical_drop_threshold": 0.06,
+            "command_threshold": 0.10,
+        }
+        self.curriculum.command_levels_lin_vel.params["range_multiplier"] = (0.35, 1.0)
         self.curriculum.command_levels_ang_vel = None
 
-        # 降低地形升级阈值，从4米降到2米
-        if self.scene.terrain.terrain_generator is not None:
-            self.scene.terrain.terrain_generator.size = (4.0, 4.0)  # 从8x8降到4x4
-
         # ------------------------------Commands------------------------------
-        # self.commands.base_velocity.ranges.lin_vel_x = (-2.0, 2.0)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        # self.commands.base_velocity.ranges.ang_vel_z = (-1.5, 1.5)
+        self.commands.base_velocity.ranges.lin_vel_x = (-1.2, 1.8)
+        self.commands.base_velocity.ranges.lin_vel_y = (-1.0, 1.0)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.8, 0.8)

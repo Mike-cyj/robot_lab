@@ -27,6 +27,15 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 import robot_lab.tasks.manager_based.locomotion.velocity.mdp as mdp
+from robot_lab.tasks.manager_based.locomotion.velocity.mdp.curriculums import (
+    command_levels_ang_vel as robot_lab_command_levels_ang_vel,
+)
+from robot_lab.tasks.manager_based.locomotion.velocity.mdp.curriculums import (
+    command_levels_lin_vel as robot_lab_command_levels_lin_vel,
+)
+from robot_lab.tasks.manager_based.locomotion.velocity.mdp.curriculums import (
+    terrain_levels_vel as robot_lab_terrain_levels_vel,
+)
 
 ##
 # Pre-defined configs
@@ -668,10 +677,13 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel, params={"move_up_fraction": 0.4, "move_down_fraction": 0.25})
+    terrain_levels = CurrTerm(
+        func=robot_lab_terrain_levels_vel,
+        params={"move_up_fraction": 0.4, "move_down_fraction": 0.25},
+    )
 
     command_levels_lin_vel = CurrTerm(
-        func=mdp.command_levels_lin_vel,
+        func=robot_lab_command_levels_lin_vel,
         params={
             "reward_term_name": "track_lin_vel_xy_exp",
             "range_multiplier": (0.1, 1.0),
@@ -679,7 +691,7 @@ class CurriculumCfg:
     )
 
     command_levels_ang_vel = CurrTerm(
-        func=mdp.command_levels_ang_vel,
+        func=robot_lab_command_levels_ang_vel,
         params={
             "reward_term_name": "track_ang_vel_z_exp",
             "range_multiplier": (0.1, 1.0),
