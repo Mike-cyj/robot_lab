@@ -78,6 +78,30 @@ The table below lists all available environments:
   python scripts/tools/list_envs.py
   ```
 
+## 训练状态与分析
+
+### 当前训练情况
+- 最近训练日志目录：`logs/rsl_rl/unitree_b2_rough/2026-05-15_15-48-37`
+- 当前课程难度：停留在 `5.85`–`5.95` 之间，最近 50 条记录内波动约 `0.096`
+- 另一个较长训练目录 `logs/rsl_rl/unitree_b2_rough/2026-05-15_02-38-57` 已经达到 `6.02`，但仍存在不稳定上升趋势
+- 训练指标显示：`Train/mean_episode_length` 已接近 `1000`，说明 episode 长度已达上限；`track_lin_vel_xy_exp` 和 `track_ang_vel_z_exp` 奖励已稳定在较高值，说明速度跟踪性能有提升
+
+### 可能原因
+1. **课程升级逻辑依赖实际位移**：当前课程函数以机器人位移和命令速度作为升级条件，金字塔楼梯环境下机器人实际前进距离不足，导致课程难以继续升级
+2. **训练环境配置问题**：当前终端中 `isaaclab` 模块无法直接 import，说明 IsaacSim/IsaacLab Python 环境尚未完全配置，无法直接验证最新训练效果
+3. **课程条件仍可能过严**：即使已放宽 `move_up_fraction` 和 `move_down_fraction`，如果机器人在复杂楼梯上的稳定移动能力不足，仍会陷入难点平台
+
+### 已做调整
+- 将 `track_lin_vel_xy_exp` 奖励权重调为 `12.0`
+- 将 `track_ang_vel_z_exp` 奖励权重调为 `6.0`
+- 调整课程条件：`move_up_fraction=0.4`，`move_down_fraction=0.25`
+- 初始 yaw 范围改为 `±0.7` 弧度，横向速度限幅改为 `±0.2`
+
+### 建议的下一步
+- 优先修复 IsaacLab/IsaacSim 环境，使 `python scripts/reinforcement_learning/rsl_rl/train.py` 能正常运行
+- 重新启动训练并重点观察 `Curriculum/terrain_levels` 曲线
+- 若课程仍卡住，可继续降低升级门槛或调整 `distance_buffer`，并观察真实位移是否满足升级条件
+
 <details>
 
 <summary>Set up IDE (Optional, click to expand)</summary>

@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import torch
+from isaaclab.managers import SceneEntityCfg
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -95,3 +96,28 @@ def command_levels_ang_vel(
             base_velocity_ranges.ang_vel_z = new_ang_vel_z.tolist()
 
     return torch.tensor(base_velocity_ranges.ang_vel_z[1], device=env.device)
+
+
+def terrain_levels_vel(
+    env: ManagerBasedRLEnv,
+    env_ids: Sequence[int],
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    move_up_fraction: float = 0.3,
+    move_down_fraction: float = 0.25,
+) -> torch.Tensor:
+    """Curriculum based on distance walked toward the commanded velocity.
+
+    The curriculum advances when the robot walks far enough relative to the terrain size,
+    and retreats when it walks significantly less than the commanded distance.
+    """
+    asset = env.scene[asset_cfg.name]
+    terrain = env.scene.terrain
+    command = env.command_manager.get_command("base_velocity")
+
+    distance = torch.norm(asset.data.root_pos_w[env_ids, :2] - env.scene.env_origins[env_ids, :2], dim=1)
+    move_up = distance > terrain.cfg.terrain_generator.size[0] * move_up_fraction
+    move_down = distance < torch.norm(command[env_ids, :2], dim=1) * env.max_episode_length_s * move_down_fraction
+    move_down *= ~move_up
+
+    terrain.update_env_origins(env_ids, move_up, move_down)
+    return torch.mean(terrain.terrain_levels.float())

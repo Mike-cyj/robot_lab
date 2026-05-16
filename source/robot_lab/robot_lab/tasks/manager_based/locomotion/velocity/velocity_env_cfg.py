@@ -668,7 +668,7 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel, params={"move_up_fraction": 0.4, "move_down_fraction": 0.25})
 
     command_levels_lin_vel = CurrTerm(
         func=mdp.command_levels_lin_vel,
